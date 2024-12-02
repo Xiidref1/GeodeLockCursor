@@ -21,7 +21,6 @@ void clipCursorOnScreen(bool sideIsLeft) {
 		std::string windowTitleStr(windowTitle);
 		if (windowTitleStr == "Geometry Dash") {
             GetWindowRect(window, &rect);
-			log::debug("rect is {}, {}, {}, {}", rect.left, rect.top, rect.right, rect.bottom);
 		}else {
 			// Otherwise just say it's on the top left of the screen 
 			CCDirector *director = CCDirector::get();
@@ -52,6 +51,7 @@ void clipCursorOnScreen(bool sideIsLeft) {
 }
 
 #include <Geode/modify/PlayLayer.hpp>
+#include <Geode/modify/EndLevelLayer.hpp>
 class $modify(PlayLayer) {
 
 	struct Fields {
@@ -76,7 +76,12 @@ class $modify(PlayLayer) {
 
 	void pauseGame(bool value) {
 		PlayLayer::pauseGame(value);
+		// Release the lock
+		ClipCursor(nullptr);
+	}
 
+	void levelComplete() {
+		PlayLayer::levelComplete();
 		// Release the lock
 		ClipCursor(nullptr);
 	}
@@ -84,6 +89,37 @@ class $modify(PlayLayer) {
 	void resume() {
 		PlayLayer::resume();
 
+		if (m_fields->doLock) {
+			clipCursorOnScreen(m_fields->lockOnLeft);
+		}
+	}
+};
+
+
+class $modify(EndLevelLayer) {
+	struct Fields {
+		bool doLock;
+		bool lockOnLeft;
+	};
+
+	void customSetup() {
+		EndLevelLayer::customSetup();
+		
+		m_fields->doLock = Mod::get()->getSettingValue<bool>("mod_enabled");
+		m_fields->lockOnLeft = Mod::get()->getSettingValue<bool>("lock_on_left");
+	}
+
+    void onReplay(cocos2d::CCObject* sender) {
+		EndLevelLayer::onReplay(sender);
+		
+		if (m_fields->doLock) {
+			clipCursorOnScreen(m_fields->lockOnLeft);
+		}
+	}
+
+    void onRestartCheckpoint(cocos2d::CCObject* sender) {
+		EndLevelLayer::onRestartCheckpoint(sender);
+		
 		if (m_fields->doLock) {
 			clipCursorOnScreen(m_fields->lockOnLeft);
 		}
